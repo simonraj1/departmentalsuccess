@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QBank Management</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+      authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+      projectId: "departmentalsuccess-bdca1",
+      storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+      messagingSenderId: "352122480258",
+      appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+      measurementId: "G-NPR3MDSDNY"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Check authentication state
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in
+        console.log('User is signed in:', user.uid);
+        loadTopics();
+      } else {
+        // User is signed out
+        console.log('User is signed out');
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Load topics from Firestore
+    async function loadTopics() {
+      const topicsContainer = document.getElementById('topicsContainer');
+      topicsContainer.innerHTML = '<div class="loading">Loading topics...</div>';
+
+      try {
+        const topicsQuery = query(collection(db, 'QuestionBank'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(topicsQuery);
+        
+        topicsContainer.innerHTML = '';
+        
+        if (querySnapshot.empty) {
+          topicsContainer.innerHTML = '<div class="no-topics">No topics found. Create your first topic!</div>';
+          return;
+        }
+
+        querySnapshot.forEach((doc) => {
+          const topic = doc.data();
+          const topicElement = createTopicElement(doc.id, topic);
+          topicsContainer.appendChild(topicElement);
+        });
+      } catch (error) {
+        console.error('Error loading topics:', error);
+        topicsContainer.innerHTML = '<div class="error">Error loading topics. Please try again.</div>';
+      }
+    }
+
+    // Create topic element
+    function createTopicElement(topicId, topic) {
+      const div = document.createElement('div');
+      div.className = 'topic-card';
+      div.style.cursor = 'pointer';
+      div.onclick = () => {
+        window.location.href = `subtopic.html?topicId=${topicId}`;
+      };
+      div.innerHTML = `
+        <div class="topic-header">
+          <h3>${topic.name}</h3>
+          <div class="topic-actions">
+            <button class="edit-btn" onclick="editTopic('${topicId}');event.stopPropagation();">Edit</button>
+            <button class="delete-btn" onclick="deleteTopic('${topicId}', event);">Delete</button>
+          </div>
+        </div>
+        <div class="topic-details">
+          <p><strong>Created:</strong> ${new Date(topic.createdAt?.toDate()).toLocaleDateString()}</p>
+        </div>
+      `;
+      return div;
+    }
+
+    // Add new topic
+    window.addNewTopic = async function() {
+      const name = document.getElementById('topicName').value.trim();
+
+      if (!name) {
+        alert('Please enter a topic name');
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, 'QuestionBank'), {
+          name,
+          createdAt: new Date(),
+          questions: []
+        });
+
+        // Clear form and reload topics
+        document.getElementById('topicName').value = '';
+        loadTopics();
+        
+        // Close modal
+        document.getElementById('addTopicModal').style.display = 'none';
+      } catch (error) {
+        console.error('Error adding topic:', error);
+        alert('Error adding topic. Please try again.');
+      }
+    }
+
+    // Delete topic
+    window.deleteTopic = async function(topicId, event) {
+      event.stopPropagation();
+      if (!confirm('Are you sure you want to delete this topic? This action cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'QuestionBank', topicId));
+        loadTopics();
+      } catch (error) {
+        alert('Error deleting topic. Please try again.');
+      }
+    }
+
+    // Edit topic
+    window.editTopic = async function(topicId) {
+      const topicRef = doc(db, 'QuestionBank', topicId);
+      const topicSnap = await getDoc(topicRef);
+      if (!topicSnap.exists()) {
+        alert('Topic not found.');
+        return;
+      }
+      const topic = topicSnap.data();
+      const newName = prompt('Edit topic name:', topic.name || '');
+      if (newName === null) return;
+      try {
+        await updateDoc(topicRef, { name: newName });
+        alert('Topic updated.');
+        loadTopics();
+      } catch (e) {
+        alert('Error updating topic.');
+      }
+    }
+
+    // Show add topic modal
+    window.showAddTopicModal = function() {
+      document.getElementById('addTopicModal').style.display = 'block';
+    }
+
+    // Close modal
+    window.closeModal = function() {
+      document.getElementById('addTopicModal').style.display = 'none';
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f6fafa;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 240px;
+      background: #f6fafa;
+      border-right: 1px solid #e5e5e5;
+      padding: 0 0 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sidebar .logo {
+      margin: 30px 0 20px 0;
+      width: 80px;
+      height: 80px;
+      background: #e0f7fa;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #009688;
+    }
+    .sidebar nav {
+      width: 100%;
+    }
+    .sidebar nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar nav ul li {
+      width: 100%;
+    }
+    .sidebar nav ul li a {
+      display: flex;
+      align-items: center;
+      padding: 15px 30px;
+      color: #222;
+      text-decoration: none;
+      font-weight: 600;
+      border-left: 4px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .sidebar nav ul li a.active,
+    .sidebar nav ul li a:hover {
+      background: #c6f7e2;
+      border-left: 4px solid #009688;
+      color: #009688;
+    }
+    .main {
+      flex: 1;
+      padding: 30px 40px;
+      background: #fff;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      margin: 0;
+      color: #009688;
+    }
+    .add-btn {
+      background: #009688;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .add-btn:hover {
+      background: #00796b;
+    }
+    .topics-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .topic-card {
+      background: #f6fafa;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px #e0e0e0;
+    }
+    .topic-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .topic-header h3 {
+      margin: 0;
+      color: #009688;
+    }
+    .topic-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .edit-btn, .delete-btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .edit-btn {
+      background: #e0f7fa;
+      color: #009688;
+    }
+    .delete-btn {
+      background: #ffebee;
+      color: #f44336;
+    }
+    .topic-details p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 {
+      margin: 0;
+      color: #009688;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    .form-group textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .cancel-btn {
+      background: #f5f5f5;
+      color: #666;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .save-btn {
+      background: #009688;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    .no-topics {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .error {
+      text-align: center;
+      padding: 20px;
+      color: #f44336;
+      background: #ffebee;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">M</div>
+      <nav>
+        <ul>
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="studymaterials.html">StudyMaterials</a></li>
+          <li><a href="qbank.html" class="active">QBank</a></li>
+          <li><a href="users.html">Users</a></li>
+          <li><a href="promocode.html">Promo</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <h1>Question Bank</h1>
+        <button class="add-btn" onclick="showAddTopicModal()">Add New Topic</button>
+      </div>
+      <div id="topicsContainer" class="topics-container">
+        <!-- Topics will be loaded here -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Topic Modal -->
+  <div id="addTopicModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Topic</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label for="topicName">Topic Name</label>
+        <input type="text" id="topicName" placeholder="Enter topic name" required>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        <button class="save-btn" onclick="addNewTopic()">Save Topic</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+  <!-- Add Firebase SDK -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, onSnapshot, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+      authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+      projectId: "departmentalsuccess-bdca1",
+      storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+      messagingSenderId: "352122480258",
+      appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+      measurementId: "G-NPR3MDSDNY"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const messaging = getMessaging(app);
+
+    // Check authentication state
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in
+        console.log('User is signed in:', user.uid);
+        loadDashboardData();
+        requestNotificationPermission();
+        renderMonthlyBarChart();
+      } else {
+        // User is signed out
+        console.log('User is signed out');
+        // Redirect to login page
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Load dashboard data from Firestore
+    function loadDashboardData() {
+      // Reference to the dashboard document in Firestore
+      const dashboardRef = doc(db, 'dashboard', 'stats');
+
+      // Listen for changes in the dashboard data
+      onSnapshot(dashboardRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          // Update dashboard cards (except totalRevenue)
+          // document.getElementById('myRevenue').textContent = data.myRevenue || '0';
+          // document.getElementById('commission').textContent = data.commission || '0';
+          document.getElementById('paidUsers').textContent = data.paidUsers || '0';
+          document.getElementById('visitorCount').textContent = data.visitors || '0';
+          // Update charts (you'll need to implement chart libraries)
+          updateCharts(data);
+        } else {
+          console.log("No dashboard data found");
+        }
+      });
+
+      // Calculate Total Revenue from users collection
+      calculateTotalRevenue();
+      // Calculate Paid Users from users collection
+      calculatePaidUsersAndVisitors();
+    }
+
+    async function calculateTotalRevenue() {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      let total = 0;
+      usersSnapshot.forEach((doc) => {
+        const user = doc.data();
+        if (user.price) {
+          const price = parseFloat(user.price);
+          if (!isNaN(price)) {
+            total += price;
+          }
+        }
+      });
+      document.getElementById('totalRevenue').textContent = total.toFixed(2);
+    }
+
+    async function calculatePaidUsersAndVisitors() {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      let paidCount = 0;
+      let freeCount = 0;
+      usersSnapshot.forEach((doc) => {
+        const user = doc.data();
+        if (user.paid === true) {
+          paidCount++;
+        } else {
+          freeCount++;
+        }
+      });
+      const totalVisitors = paidCount + freeCount;
+      document.getElementById('paidUsers').textContent = paidCount;
+      // Update donut chart center
+      const donutCenter = document.querySelector('.donut-chart .center');
+      if (donutCenter) {
+        donutCenter.innerHTML = `
+          <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;'>
+            <span style='font-size:1.1rem;color:#009688;font-weight:600;margin-bottom:2px;'>Paid: ${paidCount}</span>
+            <span style='font-size:1.1rem;color:#8b4c3b;font-weight:600;margin-bottom:2px;'>Free: ${freeCount}</span>
+            <span style='font-size:1rem;color:#222;font-weight:500;margin-top:4px;'>Visitors: ${totalVisitors}</span>
+          </div>
+        `;
+      }
+    }
+
+    // Request notification permission
+    function requestNotificationPermission() {
+      getToken(messaging, { vapidKey: 'YOUR_VAPID_KEY' })
+        .then((currentToken) => {
+          if (currentToken) {
+            console.log('FCM Token:', currentToken);
+            // Save the token to Firestore for sending notifications
+            saveTokenToFirestore(currentToken);
+          } else {
+            console.log('No registration token available. Request permission to generate one.');
+          }
+        })
+        .catch((err) => {
+          console.log('An error occurred while retrieving token. ', err);
+        });
+    }
+
+    // Save FCM token to Firestore
+    function saveTokenToFirestore(token) {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const userRef = doc(db, 'users', currentUser.uid);
+        getDoc(userRef).then((doc) => {
+          if (doc.exists()) {
+            // Update existing user document
+            doc.ref.update({
+              fcmToken: token,
+              updatedAt: serverTimestamp()
+            });
+          } else {
+            // Create new user document
+            doc.ref.set({
+              fcmToken: token,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+          }
+        });
+      }
+    }
+
+    // Handle notification button click
+    document.getElementById('notificationBtn').addEventListener('click', () => {
+      // Example: Send a test notification
+      const notification = {
+        title: 'Test Notification',
+        body: 'This is a test notification from the admin dashboard',
+        icon: '/path/to/icon.png',
+        timestamp: serverTimestamp()
+      };
+
+      // Send notification to all users
+      const notificationsRef = collection(db, 'notifications');
+      addDoc(notificationsRef, notification);
+    });
+
+    // Handle incoming messages
+    onMessage(messaging, (payload) => {
+      console.log('Message received:', payload);
+      // Show notification
+      const notificationTitle = payload.notification.title;
+      const notificationOptions = {
+        body: payload.notification.body,
+        icon: payload.notification.icon
+      };
+
+      new Notification(notificationTitle, notificationOptions);
+    });
+
+    // Update charts function (to be implemented with chart libraries)
+    function updateCharts(data) {
+      // Implement chart updates using Chart.js or other libraries
+      console.log('Update charts with data:', data);
+    }
+
+    async function renderMonthlyBarChart() {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      // Prepare data grouped by month
+      const monthlyData = {};
+      usersSnapshot.forEach((doc) => {
+        const user = doc.data();
+        // Assume user.createdAt is a Firestore Timestamp or ISO string
+        let date = user.createdAt;
+        if (date && date.toDate) date = date.toDate();
+        else if (date && typeof date === 'string') date = new Date(date);
+        else return;
+        const month = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        if (!monthlyData[month]) monthlyData[month] = { revenue: 0, paid: 0 };
+        if (user.paid === true && user.price) {
+          const price = parseFloat(user.price);
+          if (!isNaN(price)) {
+            monthlyData[month].revenue += price;
+            monthlyData[month].paid++;
+          }
+        }
+      });
+      // Sort months
+      const months = Object.keys(monthlyData).sort();
+      const revenues = months.map(m => monthlyData[m].revenue);
+      const paidUsers = months.map(m => monthlyData[m].paid);
+      // Render chart
+      const ctx = document.getElementById('barChart').getContext('2d');
+      if (window.monthlyBarChart) window.monthlyBarChart.destroy();
+      window.monthlyBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label: 'Revenue',
+              data: revenues,
+              backgroundColor: 'rgba(0, 150, 136, 0.7)',
+              yAxisID: 'y',
+            },
+            {
+              label: 'Paid Users',
+              data: paidUsers,
+              backgroundColor: 'rgba(139, 76, 59, 0.7)',
+              yAxisID: 'y1',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              title: { display: true, text: 'Revenue' }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: 'Paid Users' }
+            }
+          }
+        }
+      });
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 240px;
+      background: #f6fafa;
+      border-right: 1px solid #e5e5e5;
+      padding: 0 0 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sidebar .logo {
+      margin: 30px 0 20px 0;
+      width: 80px;
+      height: 80px;
+      background: #e0f7fa;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #009688;
+    }
+    .sidebar nav {
+      width: 100%;
+    }
+    .sidebar nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar nav ul li {
+      width: 100%;
+    }
+    .sidebar nav ul li a {
+      display: flex;
+      align-items: center;
+      padding: 15px 30px;
+      color: #222;
+      text-decoration: none;
+      font-weight: 600;
+      border-left: 4px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .sidebar nav ul li a.active,
+    .sidebar nav ul li a:hover {
+      background: #c6f7e2;
+      border-left: 4px solid #009688;
+      color: #009688;
+    }
+    .sidebar .push-notification {
+      margin-top: auto;
+      margin-bottom: 20px;
+      width: 90%;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #e0e0e0;
+      padding: 16px;
+      text-align: center;
+    }
+    .sidebar .push-notification button {
+      background: #009688;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .main {
+      flex: 1;
+      padding: 30px 40px;
+      background: #fff;
+    }
+    .dashboard-cards {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .dashboard-card {
+      flex: 1;
+      background: #f6fafa;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px #e0e0e0;
+      min-width: 180px;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .dashboard-card h4 {
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .dashboard-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .dashboard-card .loading {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #222;
+    }
+    .dashboard-charts {
+      display: flex;
+      gap: 20px;
+    }
+    .chart-card {
+      flex: 1;
+      background: #f6fafa;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px #e0e0e0;
+      min-width: 300px;
+      min-height: 300px;
+    }
+    .chart-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .chart-subtitle {
+      color: #888;
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+    }
+    /* Placeholder for charts */
+    .bar-chart, .donut-chart {
+      width: 100%;
+      height: 220px;
+      background: repeating-linear-gradient(
+        to right,
+        #e0e0e0,
+        #e0e0e0 2px,
+        #f6fafa 2px,
+        #f6fafa 40px
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #bbb;
+      font-size: 1.2rem;
+      border-radius: 8px;
+    }
+    .donut-chart {
+      background: conic-gradient(#17643b 0 60%, #8b4c3b 0 100%);
+      position: relative;
+    }
+    .donut-chart .center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #f6fafa;
+      border-radius: 50%;
+      width: 100px; height: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #222;
+      border: 6px solid #f6fafa;
+    }
+    .donut-chart .center span {
+      font-size: 1rem;
+      color: #888;
+      font-weight: 400;
+    }
+    @media (max-width: 1100px) {
+      .dashboard-charts, .dashboard-cards {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">M</div>
+      <nav>
+        <ul>
+          <li><a href="admin-dashboard.html" class="active">Dashboard</a></li>
+          <li><a href="studymaterials.html">StudyMaterials</a></li>
+          <li><a href="qbank.html">QBank</a></li>
+          <li><a href="users.html">Users</a></li>
+          <li><a href="promocode.html">Promo</a></li>
+        </ul>
+      </nav>
+      <div class="push-notification">
+        <div>Push Notification</div>
+        <button id="notificationBtn">Notification</button>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="dashboard-cards">
+        <div class="dashboard-card">
+          <h4>Total Revenue</h4>
+          <div class="value">₹ <span id="totalRevenue" class="loading">Loading...</span></div>
+        </div>
+        <div class="dashboard-card">
+          <h4>Paid User</h4>
+          <div class="value"><span id="paidUsers" class="loading">Loading...</span></div>
+        </div>
+      </div>
+      <div class="dashboard-charts">
+        <div class="chart-card">
+          <div class="chart-title">Bar Chart</div>
+          <div class="bar-chart" id="barChartContainer"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Bar Chart - Multiple</div>
+          <div class="donut-chart">
+            <div class="center">
+              <span id="visitorCount">47</span>
+              <span>Visitors</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html> 

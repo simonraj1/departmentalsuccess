@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Questions Management</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+      authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+      projectId: "departmentalsuccess-bdca1",
+      storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+      messagingSenderId: "352122480258",
+      appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+      measurementId: "G-NPR3MDSDNY"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Get topicId and subtopicId from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const topicId = urlParams.get('topicId');
+    const subtopicId = urlParams.get('subtopicId');
+
+    // Auth check
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadQuestions();
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Load questions from Firestore
+    async function loadQuestions() {
+      const questionsContainer = document.getElementById('questionsContainer');
+      questionsContainer.innerHTML = '<div class="loading">Loading questions...</div>';
+      try {
+        const questionsQuery = query(collection(db, 'QuestionBank', topicId, 'subtopics', subtopicId, 'questions'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(questionsQuery);
+        questionsContainer.innerHTML = '';
+        if (querySnapshot.empty) {
+          questionsContainer.innerHTML = '<div class="no-questions">No questions found. Add your first question!</div>';
+          return;
+        }
+        querySnapshot.forEach((docSnap) => {
+          const q = docSnap.data();
+          const qid = docSnap.id;
+          const qDiv = document.createElement('div');
+          qDiv.className = 'question-card';
+          qDiv.innerHTML = `
+            <div class="question-text"><b>Q:</b> ${q.question}</div>
+            <ul class="options">
+              <li>A. ${q.option1}</li>
+              <li>B. ${q.option2}</li>
+              <li>C. ${q.option3}</li>
+              <li>D. ${q.option4}</li>
+            </ul>
+            <div class="answer"><b>Answer:</b> ${q.correctAnswer}</div>
+            <div class="explanation"><b>Explanation:</b> ${q.explanation}</div>
+            <div class="question-actions">
+              <button class="edit-btn" onclick="editQuestionPrompt('${qid}', ${JSON.stringify(q).replace(/'/g, "&#39;")})">Edit</button>
+              <button class="delete-btn" onclick="deleteQuestion('${qid}')">Delete</button>
+            </div>
+          `;
+          questionsContainer.appendChild(qDiv);
+        });
+      } catch (error) {
+        questionsContainer.innerHTML = '<div class="error">Error loading questions.</div>';
+      }
+    }
+
+    // Delete question
+    window.deleteQuestion = async function(qid) {
+      if (!confirm('Are you sure you want to delete this question?')) return;
+      try {
+        await deleteDoc(doc(db, 'QuestionBank', topicId, 'subtopics', subtopicId, 'questions', qid));
+        loadQuestions();
+      } catch (e) {
+        alert('Error deleting question.');
+      }
+    }
+
+    // Edit question prompt
+    window.editQuestionPrompt = function(qid, q) {
+      // For simplicity, prompt for each field
+      const question = prompt('Edit Question:', q.question || '');
+      if (question === null) return;
+      const option1 = prompt('Edit Option 1 (A):', q.option1 || '');
+      if (option1 === null) return;
+      const option2 = prompt('Edit Option 2 (B):', q.option2 || '');
+      if (option2 === null) return;
+      const option3 = prompt('Edit Option 3 (C):', q.option3 || '');
+      if (option3 === null) return;
+      const option4 = prompt('Edit Option 4 (D):', q.option4 || '');
+      if (option4 === null) return;
+      const correctAnswer = prompt('Edit Correct Answer (A/B/C/D):', q.correctAnswer || '');
+      if (correctAnswer === null) return;
+      const explanation = prompt('Edit Explanation:', q.explanation || '');
+      if (explanation === null) return;
+      updateQuestion(qid, { question, option1, option2, option3, option4, correctAnswer, explanation });
+    }
+
+    // Update question in Firestore
+    async function updateQuestion(qid, data) {
+      try {
+        await updateDoc(doc(db, 'QuestionBank', topicId, 'subtopics', subtopicId, 'questions', qid), data);
+        loadQuestions();
+      } catch (e) {
+        alert('Error updating question.');
+      }
+    }
+
+    // Add the Delete All Questions button after the <h1>Questions</h1> header
+    window.deleteAllQuestions = async function() {
+      if (!confirm('Are you sure you want to delete ALL questions in this subtopic? This action cannot be undone.')) return;
+      try {
+        const questionsRef = collection(db, 'QuestionBank', topicId, 'subtopics', subtopicId, 'questions');
+        const querySnapshot = await getDocs(questionsRef);
+        const batchSize = 500; // Firestore batch limit
+        let batch = [];
+        let count = 0;
+
+        for (const docSnap of querySnapshot.docs) {
+          batch.push(deleteDoc(docSnap.ref));
+          count++;
+          if (batch.length === batchSize) {
+            await Promise.all(batch);
+            batch = [];
+          }
+        }
+        if (batch.length > 0) {
+          await Promise.all(batch);
+        }
+        alert(`Deleted ${count} questions.`);
+        loadQuestions();
+      } catch (e) {
+        alert('Error deleting all questions.');
+      }
+    };
+
+    // Update handleExcelUpload to upload directly to Firestore
+    window.handleExcelUpload = async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+        let count = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row[0]) continue;
+          const q = {
+            question: row[0] || '',
+            option1: row[1] || '',
+            option2: row[2] || '',
+            option3: row[3] || '',
+            option4: row[4] || '',
+            correctAnswer: row[5] || '',
+            explanation: row[6] || '',
+            createdAt: new Date()
+          };
+          await addDoc(collection(db, 'QuestionBank', topicId, 'subtopics', subtopicId, 'questions'), q);
+          count++;
+        }
+        alert('Uploaded ' + count + ' questions!');
+        loadQuestions();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f6fafa; margin: 0; color: #222; }
+    .container { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #f6fafa; border-right: 1px solid #e5e5e5; padding: 0 0 20px 0; display: flex; flex-direction: column; align-items: center; }
+    .sidebar .logo { margin: 30px 0 20px 0; width: 80px; height: 80px; background: #e0f7fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #009688; }
+    .sidebar nav { width: 100%; }
+    .sidebar nav ul { list-style: none; padding: 0; margin: 0; }
+    .sidebar nav ul li { width: 100%; }
+    .sidebar nav ul li a { display: flex; align-items: center; padding: 15px 30px; color: #222; text-decoration: none; font-weight: 600; border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s; }
+    .sidebar nav ul li a.active, .sidebar nav ul li a:hover { background: #c6f7e2; border-left: 4px solid #009688; color: #009688; }
+    .main { flex: 1; padding: 30px 40px; background: #fff; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .header h1 { margin: 0; color: #009688; }
+    .add-btn { background: #009688; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .add-btn:hover { background: #00796b; }
+    .question-form, .bulk-upload { background: #f6fafa; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px #e0e0e0; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; }
+    .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #e5e5e5; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+    .form-group textarea { height: 60px; resize: vertical; }
+    .questions-container { display: flex; flex-direction: column; gap: 16px; }
+    .question-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px #e0e0e0; padding: 16px; }
+    .question-text { font-weight: 600; margin-bottom: 8px; }
+    .options { margin: 0 0 8px 0; padding-left: 20px; }
+    .options li { margin-bottom: 2px; }
+    .answer { color: #17643b; font-weight: 600; }
+    .explanation { color: #888; font-size: 0.95rem; }
+    .loading, .no-questions, .error { text-align: center; padding: 20px; color: #666; }
+    .question-actions { margin-top: 10px; display: flex; gap: 10px; }
+    .edit-btn, .delete-btn { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .edit-btn { background: #e0f7fa; color: #009688; }
+    .delete-btn { background: #ffebee; color: #f44336; }
+    .bulk-upload { background: #f6fafa; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px #e0e0e0; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">M</div>
+      <nav>
+        <ul>
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="#">StudyMaterials</a></li>
+          <li><a href="qbank.html">QBank</a></li>
+          <li><a href="#">Users</a></li>
+          <li><a href="#">Promo</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <h1>Questions</h1>
+        <button class="delete-btn" onclick="deleteAllQuestions()">Delete All Questions</button>
+      </div>
+      <div class="question-form">
+        <h2>Add Single Question</h2>
+        <form id="questionForm" onsubmit="event.preventDefault(); addSingleQuestion();">
+          <div class="form-group">
+            <label for="question">Question</label>
+            <textarea id="question" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="option1">Option 1 (A)</label>
+            <input type="text" id="option1" required />
+          </div>
+          <div class="form-group">
+            <label for="option2">Option 2 (B)</label>
+            <input type="text" id="option2" required />
+          </div>
+          <div class="form-group">
+            <label for="option3">Option 3 (C)</label>
+            <input type="text" id="option3" required />
+          </div>
+          <div class="form-group">
+            <label for="option4">Option 4 (D)</label>
+            <input type="text" id="option4" required />
+          </div>
+          <div class="form-group">
+            <label for="correctAnswer">Correct Answer (A/B/C/D)</label>
+            <input type="text" id="correctAnswer" maxlength="1" required />
+          </div>
+          <div class="form-group">
+            <label for="explanation">Explanation</label>
+            <textarea id="explanation"></textarea>
+          </div>
+          <button class="add-btn" type="submit">Add Question</button>
+        </form>
+      </div>
+      <div class="bulk-upload">
+        <h2>Bulk Upload (Excel)</h2>
+        <input type="file" accept=".xlsx,.xls" onchange="handleExcelUpload(event)" />
+        <div style="font-size:0.95em;color:#888;margin-top:8px;">Excel columns: Question, Option_1, Option_2, Option_3, Option_4, correctAnswer, explanation</div>
+      </div>
+      <div id="questionsContainer" class="questions-container">
+        <!-- Questions will be loaded here -->
+      </div>
+    </main>
+  </div>
+</body>
+</html> 

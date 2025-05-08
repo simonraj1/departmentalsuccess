@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Users Management</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, orderBy, getDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+      authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+      projectId: "departmentalsuccess-bdca1",
+      storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+      messagingSenderId: "352122480258",
+      appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+      measurementId: "G-NPR3MDSDNY"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    window.db = db;
+
+    let allUsers = []; // Store all users for client-side filtering
+
+    // Auth check
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadUsers();
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase();
+      filterUsers(searchTerm);
+    });
+
+    function filterUsers(searchTerm) {
+      const filteredUsers = allUsers.filter(user => {
+        const email = (user.email || '').toLowerCase();
+        const name = (user.name || '').toLowerCase();
+        return email.includes(searchTerm) || name.includes(searchTerm);
+      });
+      displayUsers(filteredUsers);
+    }
+
+    function displayUsers(users) {
+      const usersContainer = document.getElementById('usersContainer');
+      usersContainer.innerHTML = '';
+      
+      if (users.length === 0) {
+        usersContainer.innerHTML = '<div class="no-users">No users found.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'users-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Plan</th>
+            <th>Price</th>
+            <th>User Status</th>
+            <th>Coupon</th>
+            <th>Expiry Date</th>
+            <th>Has Active Subscription</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      `;
+
+      users.forEach((user) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${user.email || 'N/A'}</td>
+          <td>${user.name || 'N/A'}</td>
+          <td>${user.role || 'N/A'}</td>
+          <td>${user.plan || 'N/A'}</td>
+          <td>${user.price || 'N/A'}</td>
+          <td>${user.userStatus || 'N/A'}</td>
+          <td>${user.coupon || 'N/A'}</td>
+          <td>${user.expiryDate || 'N/A'}</td>
+          <td>${user.hasActiveSubscription !== undefined ? user.hasActiveSubscription : 'false'}</td>
+          <td>
+            <button class="details-btn" onclick="showUserDetails('${user.id}')">Details</button>
+            <button class="delete-btn" onclick="deleteUser('${user.id}')">Delete</button>
+          </td>
+        `;
+        table.querySelector('tbody').appendChild(row);
+      });
+
+      usersContainer.appendChild(table);
+    }
+
+    // Load users from Firestore
+    async function loadUsers() {
+      const usersContainer = document.getElementById('usersContainer');
+      usersContainer.innerHTML = '<div class="loading">Loading users...</div>';
+      
+      try {
+        const usersQuery = query(collection(db, 'users'), orderBy('name', 'asc'));
+        const querySnapshot = await getDocs(usersQuery);
+        
+        allUsers = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        displayUsers(allUsers);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        usersContainer.innerHTML = '<div class="error">Error loading users. Please try again.</div>';
+      }
+    }
+  </script>
+  <!-- Modal for editing user (show all fields, only some editable) -->
+  <div id="editUserModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:32px 24px;border-radius:12px;max-width:500px;width:95vw;position:relative;">
+      <button id="closeEditModal" style="position:absolute;top:12px;right:16px;font-size:1.3rem;background:none;border:none;cursor:pointer;">&times;</button>
+      <h2 style="color:#009688;margin-top:0;">Edit User</h2>
+      <form id="editUserForm">
+        <input type="hidden" id="editUserId">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <input id="editEmail" placeholder="Email" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editName" placeholder="Name" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;">
+          <input id="editMobile" placeholder="Mobile" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;">
+          <input id="editRole" placeholder="Role" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;">
+          <select id="editPaid" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;"><option value="">Paid?</option><option value="true">Yes</option><option value="false">No</option></select>
+          <input id="editPlan" placeholder="Plan" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;">
+          <input id="editPrice" placeholder="Price" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;">
+          <input id="editPaymentDate" placeholder="Payment Date" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editPaymentId" placeholder="Payment ID" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editRegisteredOn" placeholder="Registered On" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editSubscribedOn" placeholder="Subscribed On" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editUserStatus" placeholder="User Status" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <select id="editVerified" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;"><option value="">Verified?</option><option value="true">Yes</option><option value="false">No</option></select>
+          <input id="editCoupon" placeholder="Coupon" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editCreatedAt" placeholder="Created At" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editCurrentDeviceId" placeholder="Current Device ID" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editExpiry" placeholder="Expiry" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editExpiryDate" placeholder="Expiry Date" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <select id="editIsLoggedIn" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;"><option value="">Is Logged In?</option><option value="true">Yes</option><option value="false">No</option></select>
+          <select id="editIsVerified" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;"><option value="">Is Verified?</option><option value="true">Yes</option><option value="false">No</option></select>
+          <input id="editLastLoginTime" placeholder="Last Login Time" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editLoginIn" placeholder="Login In" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <input id="editUid" placeholder="UID" disabled style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;background:#f6f6f6;">
+          <select id="editHasActiveSubscription" style="padding:8px;border-radius:6px;border:1px solid #e5e5e5;">
+            <option value="">Has Active Subscription?</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <button type="submit" style="margin-top:18px;width:100%;background:#009688;color:#fff;padding:12px 0;border:none;border-radius:6px;font-size:1.1rem;font-weight:600;cursor:pointer;">Save Changes</button>
+      </form>
+    </div>
+  </div>
+  <script type="module">
+    // Modal logic and editUser functions for all fields (only some editable)
+    const editUserModal = document.getElementById('editUserModal');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const editUserForm = document.getElementById('editUserForm');
+    closeEditModal.onclick = () => (editUserModal.style.display = 'none');
+    window.onclick = (e) => { if (e.target === editUserModal) editUserModal.style.display = 'none'; };
+
+    window.editUser = async function(userId) {
+      const { doc, getDoc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const userRef = doc(window.db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        alert("User not found.");
+        return;
+      }
+      const user = userSnap.data();
+      document.getElementById('editUserId').value = userId;
+      document.getElementById('editEmail').value = user.email || '';
+      document.getElementById('editName').value = user.name || '';
+      document.getElementById('editMobile').value = user.mobile || '';
+      document.getElementById('editRole').value = user.role || '';
+      document.getElementById('editPaid').value = user.paid === true ? 'true' : (user.paid === false ? 'false' : '');
+      document.getElementById('editPlan').value = user.plan || '';
+      document.getElementById('editPrice').value = user.price || '';
+      document.getElementById('editPaymentDate').value = user.paymentDate || '';
+      document.getElementById('editPaymentId').value = user.paymentId || '';
+      document.getElementById('editRegisteredOn').value = user.registeredOn || '';
+      document.getElementById('editSubscribedOn').value = user.subscribedOn || '';
+      document.getElementById('editUserStatus').value = user.userStatus || '';
+      document.getElementById('editVerified').value = user.verified === true ? 'true' : (user.verified === false ? 'false' : '');
+      document.getElementById('editCoupon').value = user.coupon || '';
+      document.getElementById('editCreatedAt').value = user.createdAt || '';
+      document.getElementById('editCurrentDeviceId').value = user.currentDeviceId || '';
+      document.getElementById('editExpiry').value = user.expiry || '';
+      document.getElementById('editExpiryDate').value = user.expiryDate || '';
+      document.getElementById('editIsLoggedIn').value = user.isLoggedIn === true ? 'true' : (user.isLoggedIn === false ? 'false' : '');
+      document.getElementById('editIsVerified').value = user.isVerified === true ? 'true' : (user.isVerified === false ? 'false' : '');
+      document.getElementById('editLastLoginTime').value = user.lastLoginTime || '';
+      document.getElementById('editLoginIn').value = user.loginIn || '';
+      document.getElementById('editUid').value = user.uid || '';
+      document.getElementById('editHasActiveSubscription').value = user.hasActiveSubscription === true ? 'true' : (user.hasActiveSubscription === false ? 'false' : 'false');
+      editUserModal.style.display = 'flex';
+    };
+
+    editUserForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const userId = document.getElementById('editUserId').value;
+      const userRef = doc(window.db, "users", userId);
+      const updatedUser = {
+        name: document.getElementById('editName').value,
+        mobile: document.getElementById('editMobile').value,
+        role: document.getElementById('editRole').value,
+        paid: document.getElementById('editPaid').value === 'true' ? true : (document.getElementById('editPaid').value === 'false' ? false : undefined),
+        plan: document.getElementById('editPlan').value,
+        price: document.getElementById('editPrice').value,
+        hasActiveSubscription: document.getElementById('editHasActiveSubscription').value === 'true' ? true : false
+      };
+      Object.keys(updatedUser).forEach(key => updatedUser[key] === undefined && delete updatedUser[key]);
+      try {
+        await updateDoc(userRef, updatedUser);
+        alert('User updated successfully.');
+        editUserModal.style.display = 'none';
+        location.reload();
+      } catch (error) {
+        alert('Error updating user: ' + error.message);
+      }
+    };
+
+    window.deleteUser = async function(userId) {
+      if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+      try {
+        const { deleteDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+        await deleteDoc(doc(window.db, "users", userId));
+        alert("User deleted successfully.");
+        loadUsers(); // Refresh the table
+      } catch (error) {
+        alert("Error deleting user: " + error.message);
+      }
+    };
+  </script>
+  <!-- Modal for user details -->
+  <div id="userDetailsModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:32px 24px;border-radius:12px;max-width:800px;width:95vw;position:relative;max-height:90vh;overflow-y:auto;">
+      <button id="closeDetailsModal" style="position:absolute;top:12px;right:16px;font-size:1.3rem;background:none;border:none;cursor:pointer;">&times;</button>
+      <h2 style="color:#009688;margin-top:0;">User Details</h2>
+      <div id="userDetailsContent" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <!-- Details will be populated here -->
+      </div>
+    </div>
+  </div>
+  <script type="module">
+    // Add details modal functionality
+    const userDetailsModal = document.getElementById('userDetailsModal');
+    const closeDetailsModal = document.getElementById('closeDetailsModal');
+    closeDetailsModal.onclick = () => (userDetailsModal.style.display = 'none');
+    window.onclick = (e) => { if (e.target === userDetailsModal) userDetailsModal.style.display = 'none'; };
+
+    window.showUserDetails = async function(userId) {
+      const { doc, getDoc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const userRef = doc(window.db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        alert("User not found.");
+        return;
+      }
+
+      const user = userSnap.data();
+      const detailsContent = document.getElementById('userDetailsContent');
+      
+      // Define editable fields and their input types
+      const editableFields = {
+        name: 'text',
+        mobile: 'text',
+        role: 'text',
+        plan: 'text',
+        price: 'text',
+        userStatus: 'text',
+        coupon: 'text',
+        hasActiveSubscription: 'select'
+      };
+
+      // Create a grid of all user fields
+      const fields = [
+        { label: 'Email', value: user.email, editable: false },
+        { label: 'Name', value: user.name, editable: true, field: 'name' },
+        { label: 'Mobile', value: user.mobile, editable: true, field: 'mobile' },
+        { label: 'Role', value: user.role, editable: true, field: 'role' },
+        { label: 'Paid', value: user.paid, editable: false },
+        { label: 'Plan', value: user.plan, editable: true, field: 'plan' },
+        { label: 'Price', value: user.price, editable: true, field: 'price' },
+        { label: 'Payment Date', value: user.paymentDate, editable: false },
+        { label: 'Payment ID', value: user.paymentId, editable: false },
+        { label: 'Registered On', value: user.registeredOn, editable: false },
+        { label: 'Subscribed On', value: user.subscribedOn, editable: false },
+        { label: 'User Status', value: user.userStatus, editable: true, field: 'userStatus' },
+        { label: 'Verified', value: user.verified, editable: false },
+        { label: 'Coupon', value: user.coupon, editable: true, field: 'coupon' },
+        { label: 'Created At', value: user.createdAt, editable: false },
+        { label: 'Current Device ID', value: user.currentDeviceId, editable: false },
+        { label: 'Expiry', value: user.expiry, editable: false },
+        { label: 'Expiry Date', value: user.expiryDate, editable: false },
+        { label: 'Is Logged In', value: user.isLoggedIn, editable: false },
+        { label: 'Is Verified', value: user.isVerified, editable: false },
+        { label: 'Last Login Time', value: user.lastLoginTime, editable: false },
+        { label: 'Login In', value: user.loginIn, editable: false },
+        { label: 'UID', value: user.uid, editable: false },
+        { label: 'Has Active Subscription', value: user.hasActiveSubscription, editable: true, field: 'hasActiveSubscription' }
+      ];
+
+      detailsContent.innerHTML = fields.map(field => {
+        if (field.editable) {
+          if (field.field === 'hasActiveSubscription') {
+            return `
+              <div style="padding:8px;background:#f6fafa;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <strong style="color:#009688;">${field.label}:</strong>
+                  <select id="edit_${field.field}" style="margin-left:8px;padding:4px;border-radius:4px;border:1px solid #e5e5e5;">
+                    <option value="true" ${field.value === true ? 'selected' : ''}>Yes</option>
+                    <option value="false" ${field.value === false ? 'selected' : ''}>No</option>
+                  </select>
+                </div>
+                <button onclick="saveFieldEdit('${userId}', '${field.field}')" class="save-btn">Save</button>
+              </div>
+            `;
+          }
+          return `
+            <div style="padding:8px;background:#f6fafa;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <strong style="color:#009688;">${field.label}:</strong>
+                <input type="${editableFields[field.field]}" id="edit_${field.field}" value="${field.value || ''}" style="margin-left:8px;padding:4px;border-radius:4px;border:1px solid #e5e5e5;">
+              </div>
+              <button onclick="saveFieldEdit('${userId}', '${field.field}')" class="save-btn">Save</button>
+            </div>
+          `;
+        }
+        return `
+          <div style="padding:8px;background:#f6fafa;border-radius:6px;">
+            <strong style="color:#009688;">${field.label}:</strong>
+            <span style="margin-left:8px;">${field.value !== undefined ? field.value : 'N/A'}</span>
+          </div>
+        `;
+      }).join('');
+
+      userDetailsModal.style.display = 'flex';
+    };
+
+    window.saveFieldEdit = async function(userId, field) {
+      const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const userRef = doc(window.db, "users", userId);
+      const inputElement = document.getElementById(`edit_${field}`);
+      let value = inputElement.value;
+
+      // Convert value based on field type
+      if (field === 'hasActiveSubscription') {
+        value = value === 'true';
+      }
+
+      try {
+        await updateDoc(userRef, {
+          [field]: value
+        });
+        alert('Field updated successfully');
+        // Refresh the details view
+        showUserDetails(userId);
+      } catch (error) {
+        alert('Error updating field: ' + error.message);
+      }
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f6fafa; margin: 0; color: #222; }
+    .container { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #f6fafa; border-right: 1px solid #e5e5e5; padding: 0 0 20px 0; display: flex; flex-direction: column; align-items: center; }
+    .sidebar .logo { margin: 30px 0 20px 0; width: 80px; height: 80px; background: #e0f7fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #009688; }
+    .sidebar nav { width: 100%; }
+    .sidebar nav ul { list-style: none; padding: 0; margin: 0; }
+    .sidebar nav ul li { width: 100%; }
+    .sidebar nav ul li a { display: flex; align-items: center; padding: 15px 30px; color: #222; text-decoration: none; font-weight: 600; border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s; }
+    .sidebar nav ul li a.active, .sidebar nav ul li a:hover { background: #c6f7e2; border-left: 4px solid #009688; color: #009688; }
+    .main { flex: 1; padding: 30px 40px; background: #fff; }
+    .header { display: flex; flex-direction: column; gap: 20px; }
+    @media (min-width: 768px) {
+      .header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+    .users-table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 8px #e0e0e0; border-radius: 8px; overflow: hidden; }
+    .users-table th, .users-table td { padding: 15px; text-align: left; border-bottom: 1px solid #e5e5e5; }
+    .users-table th { background: #f6fafa; font-weight: 600; color: #009688; }
+    .users-table tr:last-child td { border-bottom: none; }
+    .users-table tr:hover { background: #f6fafa; }
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; font-weight: 600; }
+    .status-badge.active { background: #e0f7fa; color: #009688; }
+    .status-badge.inactive { background: #ffebee; color: #f44336; }
+    .edit-btn, .delete-btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .edit-btn { background: #e0f7fa; color: #009688; margin-right: 8px; }
+    .delete-btn { background: #ffebee; color: #f44336; }
+    .loading, .no-users, .error { text-align: center; padding: 20px; color: #666; }
+    .details-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #e3f2fd;
+      color: #1976d2;
+      margin-right: 8px;
+    }
+    .details-btn:hover {
+      background: #bbdefb;
+    }
+    .save-btn {
+      padding: 4px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #e0f7fa;
+      color: #009688;
+      margin-left: 8px;
+    }
+    .save-btn:hover {
+      background: #b2ebf2;
+    }
+    .search-container {
+      margin-bottom: 20px;
+    }
+    .search-input {
+      width: 100%;
+      max-width: 400px;
+      padding: 10px 15px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #009688;
+      box-shadow: 0 0 0 2px rgba(0, 150, 136, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">M</div>
+      <nav>
+        <ul>
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="studymaterials.html">StudyMaterials</a></li>
+          <li><a href="qbank.html">QBank</a></li>
+          <li><a href="users.html" class="active">Users</a></li>
+          <li><a href="promocode.html">Promo</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <h1>Users</h1>
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search by email or name..." class="search-input">
+        </div>
+      </div>
+      <div id="usersContainer" class="users-container">
+        <!-- Users will be loaded here -->
+      </div>
+    </main>
+  </div>
+</body>
+</html> 

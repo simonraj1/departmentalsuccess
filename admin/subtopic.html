@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Subtopic Management</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+      authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+      projectId: "departmentalsuccess-bdca1",
+      storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+      messagingSenderId: "352122480258",
+      appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+      measurementId: "G-NPR3MDSDNY"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Get topic ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const topicId = urlParams.get('topicId');
+
+    // Check authentication state
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in
+        console.log('User is signed in:', user.uid);
+        loadTopicAndSubtopics();
+      } else {
+        // User is signed out
+        console.log('User is signed out');
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Load topic and subtopics
+    async function loadTopicAndSubtopics() {
+      if (!topicId) {
+        window.location.href = 'qbank.html';
+        return;
+      }
+
+      try {
+        // Get topic details
+        const topicDoc = await getDoc(doc(db, 'QuestionBank', topicId));
+        if (!topicDoc.exists()) {
+          window.location.href = 'qbank.html';
+          return;
+        }
+
+        const topic = topicDoc.data();
+        document.getElementById('topicTitle').textContent = topic.name;
+
+        // Load subtopics
+        const subtopicsContainer = document.getElementById('subtopicsContainer');
+        subtopicsContainer.innerHTML = '<div class="loading">Loading subtopics...</div>';
+
+        const subtopicsQuery = query(collection(db, 'QuestionBank', topicId, 'subtopics'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(subtopicsQuery);
+        
+        subtopicsContainer.innerHTML = '';
+        
+        if (querySnapshot.empty) {
+          subtopicsContainer.innerHTML = '<div class="no-subtopics">No subtopics found. Create your first subtopic!</div>';
+          return;
+        }
+
+        querySnapshot.forEach((doc) => {
+          const subtopic = doc.data();
+          const subtopicElement = createSubtopicElement(doc.id, subtopic);
+          subtopicsContainer.appendChild(subtopicElement);
+        });
+      } catch (error) {
+        console.error('Error loading subtopics:', error);
+        document.getElementById('subtopicsContainer').innerHTML = '<div class="error">Error loading subtopics. Please try again.</div>';
+      }
+    }
+
+    // Create subtopic element
+    function createSubtopicElement(subtopicId, subtopic) {
+      const div = document.createElement('div');
+      div.className = 'subtopic-card';
+      div.style.cursor = 'pointer';
+      div.onclick = () => window.location.href = `questions.html?topicId=${topicId}&subtopicId=${subtopicId}`;
+      div.innerHTML = `
+        <div class="subtopic-header">
+          <h3>${subtopic.name}</h3>
+          <div class="subtopic-actions">
+            <button class="edit-btn" onclick="editSubtopic('${subtopicId}');event.stopPropagation();">Edit</button>
+            <button class="delete-btn" onclick="deleteSubtopic('${subtopicId}');event.stopPropagation();">Delete</button>
+          </div>
+        </div>
+        <div class="subtopic-details">
+          <p><strong>Created:</strong> ${new Date(subtopic.createdAt?.toDate()).toLocaleDateString()}</p>
+          <p class="question-count" id="question-count-${subtopicId}">Questions: Loading...</p>
+        </div>
+      `;
+
+      // Fetch and display the question count
+      getDocs(collection(db, 'QuestionBank', topicId, 'subtopics', subtopicId, 'questions')).then((qsnap) => {
+        div.querySelector(`#question-count-${subtopicId}`).textContent = `Questions: ${qsnap.size}`;
+      }).catch(() => {
+        div.querySelector(`#question-count-${subtopicId}`).textContent = `Questions: Error`;
+      });
+
+      return div;
+    }
+
+    // Add new subtopic
+    window.addNewSubtopic = async function() {
+      const name = document.getElementById('subtopicName').value.trim();
+
+      if (!name) {
+        alert('Please enter a subtopic name');
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, 'QuestionBank', topicId, 'subtopics'), {
+          name,
+          createdAt: new Date(),
+          questions: []
+        });
+
+        // Clear form and reload subtopics
+        document.getElementById('subtopicName').value = '';
+        loadTopicAndSubtopics();
+        
+        // Close modal
+        document.getElementById('addSubtopicModal').style.display = 'none';
+      } catch (error) {
+        console.error('Error adding subtopic:', error);
+        alert('Error adding subtopic. Please try again.');
+      }
+    }
+
+    // Delete subtopic
+    window.deleteSubtopic = async function(subtopicId) {
+      if (!confirm('Are you sure you want to delete this subtopic? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        await deleteDoc(doc(db, 'QuestionBank', topicId, 'subtopics', subtopicId));
+        loadTopicAndSubtopics();
+      } catch (error) {
+        console.error('Error deleting subtopic:', error);
+        alert('Error deleting subtopic. Please try again.');
+      }
+    }
+
+    // Edit subtopic (placeholder for future implementation)
+    window.editSubtopic = function(subtopicId) {
+      alert('Edit functionality will be implemented in the next version');
+    }
+
+    // Show add subtopic modal
+    window.showAddSubtopicModal = function() {
+      document.getElementById('addSubtopicModal').style.display = 'block';
+    }
+
+    // Close modal
+    window.closeModal = function() {
+      document.getElementById('addSubtopicModal').style.display = 'none';
+    }
+
+    window.handleExcelUpload = async function() {
+      const fileInput = document.getElementById('excelUpload');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select an Excel file first.');
+        return;
+      }
+      // Dynamically import XLSX as a named import
+      const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+        // Assume first row is header
+        const header = rows[0];
+        const subtopicIdx = header.indexOf('subtopic');
+        const questionIdx = header.indexOf('question');
+        const optionAIdx = header.indexOf('optionA');
+        const optionBIdx = header.indexOf('optionB');
+        const optionCIdx = header.indexOf('optionC');
+        const optionDIdx = header.indexOf('optionD');
+        const correctAnswerIdx = header.indexOf('correctAnswer');
+        const explanationIdx = header.indexOf('explanation');
+        if (subtopicIdx === -1 || questionIdx === -1) {
+          alert('Excel must have at least subtopic and question columns.');
+          return;
+        }
+        // Progress bar setup
+        const progressContainer = document.getElementById('uploadProgressContainer');
+        const progressBar = document.getElementById('uploadProgressBar');
+        const progressText = document.getElementById('uploadProgressText');
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Starting upload...';
+        // Map to keep track of subtopic document IDs
+        const subtopicDocIds = {};
+        let processed = 0;
+        const total = rows.length - 1;
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row[subtopicIdx] || !row[questionIdx]) continue;
+          const subtopicName = row[subtopicIdx];
+          // Check if subtopic already created in this upload
+          let subtopicDocId = subtopicDocIds[subtopicName];
+          if (!subtopicDocId) {
+            // Create subtopic in Firestore
+            const subtopicDoc = await addDoc(collection(db, 'QuestionBank', topicId, 'subtopics'), {
+              name: subtopicName,
+              createdAt: new Date(),
+            });
+            subtopicDocId = subtopicDoc.id;
+            subtopicDocIds[subtopicName] = subtopicDocId;
+          }
+          // Add question under subtopic
+          await addDoc(collection(db, 'QuestionBank', topicId, 'subtopics', subtopicDocId, 'questions'), {
+            question: row[questionIdx] || '',
+            option1: row[optionAIdx] || '',
+            option2: row[optionBIdx] || '',
+            option3: row[optionCIdx] || '',
+            option4: row[optionDIdx] || '',
+            correctAnswer: row[correctAnswerIdx] || '',
+            explanation: row[explanationIdx] || '',
+            createdAt: new Date(),
+          });
+          processed++;
+          const percent = Math.round((processed / total) * 100);
+          progressBar.style.width = percent + '%';
+          progressText.textContent = `Uploading: ${processed} of ${total}`;
+        }
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+        setTimeout(() => { progressContainer.style.display = 'none'; }, 1500);
+        alert('Bulk upload complete!');
+        loadTopicAndSubtopics();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f6fafa;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 240px;
+      background: #f6fafa;
+      border-right: 1px solid #e5e5e5;
+      padding: 0 0 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sidebar .logo {
+      margin: 30px 0 20px 0;
+      width: 80px;
+      height: 80px;
+      background: #e0f7fa;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #009688;
+    }
+    .sidebar nav {
+      width: 100%;
+    }
+    .sidebar nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar nav ul li {
+      width: 100%;
+    }
+    .sidebar nav ul li a {
+      display: flex;
+      align-items: center;
+      padding: 15px 30px;
+      color: #222;
+      text-decoration: none;
+      font-weight: 600;
+      border-left: 4px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .sidebar nav ul li a.active,
+    .sidebar nav ul li a:hover {
+      background: #c6f7e2;
+      border-left: 4px solid #009688;
+      color: #009688;
+    }
+    .main {
+      flex: 1;
+      padding: 30px 40px;
+      background: #fff;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      margin: 0;
+      color: #009688;
+    }
+    .add-btn {
+      background: #009688;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .add-btn:hover {
+      background: #00796b;
+    }
+    .subtopics-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .subtopic-card {
+      background: #f6fafa;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px #e0e0e0;
+    }
+    .subtopic-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .subtopic-header h3 {
+      margin: 0;
+      color: #009688;
+    }
+    .subtopic-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .edit-btn, .delete-btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .edit-btn {
+      background: #e0f7fa;
+      color: #009688;
+    }
+    .delete-btn {
+      background: #ffebee;
+      color: #f44336;
+    }
+    .subtopic-details p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 {
+      margin: 0;
+      color: #009688;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .cancel-btn {
+      background: #f5f5f5;
+      color: #666;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .save-btn {
+      background: #009688;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    .no-subtopics {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .error {
+      text-align: center;
+      padding: 20px;
+      color: #f44336;
+      background: #ffebee;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">M</div>
+      <nav>
+        <ul>
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="#">StudyMaterials</a></li>
+          <li><a href="qbank.html">QBank</a></li>
+          <li><a href="#">Users</a></li>
+          <li><a href="#">Promo</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <h1 id="topicTitle">Topic Name</h1>
+        <button class="add-btn" onclick="showAddSubtopicModal()">Add New Subtopic</button>
+        <input type="file" id="excelUpload" accept=".xlsx,.xls" style="margin-left:20px;" />
+        <button class="add-btn" onclick="handleExcelUpload()" style="margin-left:10px;">Upload Excel</button>
+      </div>
+      <div id="uploadProgressContainer" style="display:none; margin: 20px 0;">
+        <div style="width:100%;background:#eee;border-radius:8px;overflow:hidden;height:24px;">
+          <div id="uploadProgressBar" style="height:24px;width:0%;background:#009688;color:#fff;text-align:center;line-height:24px;font-weight:600;transition:width 0.2s;"></div>
+        </div>
+        <div id="uploadProgressText" style="text-align:center;margin-top:4px;color:#009688;font-size:0.95em;"></div>
+      </div>
+      <div id="subtopicsContainer" class="subtopics-container">
+        <!-- Subtopics will be loaded here -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Subtopic Modal -->
+  <div id="addSubtopicModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Subtopic</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label for="subtopicName">Subtopic Name</label>
+        <input type="text" id="subtopicName" placeholder="Enter subtopic name" required>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        <button class="save-btn" onclick="addNewSubtopic()">Save Subtopic</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

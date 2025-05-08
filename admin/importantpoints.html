@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Important Points Management</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+      authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+      projectId: "departmentalsuccess-bdca1",
+      storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+      messagingSenderId: "352122480258",
+      appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+      measurementId: "G-NPR3MDSDNY"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Get topicId and subtopicId from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const topicId = urlParams.get('topicId');
+    const subtopicId = urlParams.get('subtopicId');
+
+    // Auth check
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadPoints();
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Load important points
+    async function loadPoints() {
+      const pointsContainer = document.getElementById('pointsContainer');
+      pointsContainer.innerHTML = '<div class="loading">Loading important points...</div>';
+      try {
+        const pointsQuery = query(collection(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(pointsQuery);
+        pointsContainer.innerHTML = '';
+        if (querySnapshot.empty) {
+          pointsContainer.innerHTML = '<div class="no-points">No important points found. Add your first point!</div>';
+          return;
+        }
+        querySnapshot.forEach((docSnap) => {
+          const p = docSnap.data();
+          const pointId = docSnap.id;
+          const pointsArr = [p.point1, p.point2, p.point3, p.point4, p.point5].filter(Boolean);
+          const pointsHtml = pointsArr.length > 0
+            ? pointsArr.map((pt, idx) => `<div><b>Point${idx+1}:</b> ${pt}</div>`).join('')
+            : '<div style="color:#888;">No points available</div>';
+          const pDiv = document.createElement('div');
+          pDiv.className = 'point-card';
+          pDiv.innerHTML = `
+            <div class="point-text" id="point-text-${pointId}">${pointsHtml}</div>
+            <div class="point-actions">
+              <button class="edit-btn" onclick="editPointPrompt('${pointId}', '${encodeURIComponent(pointsArr.join(' | '))}')">Edit</button>
+              <button class="delete-btn" onclick="deletePoint('${pointId}')">Delete</button>
+            </div>
+          `;
+          pointsContainer.appendChild(pDiv);
+        });
+      } catch (error) {
+        pointsContainer.innerHTML = '<div class="error">Error loading important points.</div>';
+      }
+    }
+
+    // Add single point
+    window.addSinglePoint = async function() {
+      const point1 = document.getElementById('point1').value.trim();
+      const point2 = document.getElementById('point2').value.trim();
+      const point3 = document.getElementById('point3').value.trim();
+      const point4 = document.getElementById('point4').value.trim();
+      const point5 = document.getElementById('point5').value.trim();
+      if (!point1) {
+        alert('Please enter at least Point 1.');
+        return;
+      }
+      try {
+        await addDoc(collection(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints'), {
+          point1,
+          point2,
+          point3,
+          point4,
+          point5,
+          createdAt: new Date()
+        });
+        document.getElementById('pointForm').reset();
+        loadPoints();
+      } catch (e) {
+        alert('Error adding important points.');
+      }
+    }
+
+    // Bulk upload from Excel
+    window.handleExcelUpload = async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+        // Assume first row is header
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row[0]) continue;
+          await addDoc(collection(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints'), {
+            point1: row[0] || '',
+            point2: row[1] || '',
+            point3: row[2] || '',
+            point4: row[3] || '',
+            point5: row[4] || '',
+            createdAt: new Date()
+          });
+        }
+        loadPoints();
+        alert('Bulk upload complete!');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Delete point
+    window.deletePoint = async function(pointId) {
+      if (!confirm('Are you sure you want to delete this point?')) return;
+      try {
+        await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js').then(({ deleteDoc, doc }) =>
+          deleteDoc(doc(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints', pointId))
+        );
+        loadPoints();
+      } catch (e) {
+        alert('Error deleting point.');
+      }
+    }
+
+    // Edit point prompt
+    window.editPointPrompt = function(pointId, pointText) {
+      const decoded = decodeURIComponent(pointText);
+      const newPoint = prompt('Edit important point:', decoded);
+      if (newPoint !== null && newPoint.trim() !== '' && newPoint !== decoded) {
+        updatePoint(pointId, newPoint.trim());
+      }
+    }
+
+    // Update point in Firestore
+    async function updatePoint(pointId, newPoint) {
+      try {
+        await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js').then(({ updateDoc, doc }) =>
+          updateDoc(doc(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints', pointId), { point: newPoint })
+        );
+        loadPoints();
+      } catch (e) {
+        alert('Error updating point.');
+      }
+    }
+
+    // Overall Upload: Upload all important points as questions
+    document.getElementById('overallUploadBtn').onclick = async function() {
+      if (!confirm('Are you sure you want to upload all important points as questions?')) return;
+      try {
+        const pointsQuery = query(collection(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints'));
+        const querySnapshot = await getDocs(pointsQuery);
+        if (querySnapshot.empty) {
+          alert('No important points to upload.');
+          return;
+        }
+        let count = 0;
+        for (const docSnap of querySnapshot.docs) {
+          const p = docSnap.data();
+          await addDoc(collection(db, 'StudyMaterials', topicId, 'subtopics', subtopicId, 'importantpoints'), {
+            point: p.point,
+            createdAt: new Date()
+          });
+          count++;
+        }
+        alert('Uploaded ' + count + ' important points as points!');
+      } catch (e) {
+        alert('Error during overall upload.');
+      }
+    }
+  </script>
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f6fafa; margin: 0; color: #222; }
+    .container { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #f6fafa; border-right: 1px solid #e5e5e5; padding: 0 0 20px 0; display: flex; flex-direction: column; align-items: center; }
+    .sidebar .logo { margin: 30px 0 20px 0; width: 80px; height: 80px; background: #e0f7fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #009688; }
+    .sidebar nav { width: 100%; }
+    .sidebar nav ul { list-style: none; padding: 0; margin: 0; }
+    .sidebar nav ul li { width: 100%; }
+    .sidebar nav ul li a { display: flex; align-items: center; padding: 15px 30px; color: #222; text-decoration: none; font-weight: 600; border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s; }
+    .sidebar nav ul li a.active, .sidebar nav ul li a:hover { background: #c6f7e2; border-left: 4px solid #009688; color: #009688; }
+    .main { flex: 1; padding: 30px 40px; background: #fff; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .header h1 { margin: 0; color: #009688; }
+    .add-btn { background: #009688; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .add-btn:hover { background: #00796b; }
+    .point-form, .bulk-upload { background: #f6fafa; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px #e0e0e0; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; }
+    .form-group input { width: 100%; padding: 8px; border: 1px solid #e5e5e5; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+    .points-container { display: flex; flex-direction: column; gap: 16px; }
+    .point-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px #e0e0e0; padding: 16px; font-size: 1.1rem; }
+    .point-text { font-weight: 500; }
+    .loading, .no-points, .error { text-align: center; padding: 20px; color: #666; }
+    .point-actions { margin-top: 10px; display: flex; gap: 10px; }
+    .edit-btn, .delete-btn { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .edit-btn { background: #e0f7fa; color: #009688; }
+    .delete-btn { background: #ffebee; color: #f44336; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">M</div>
+      <nav>
+        <ul>
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="studymaterials.html" class="active">StudyMaterials</a></li>
+          <li><a href="qbank.html">QBank</a></li>
+          <li><a href="#">Users</a></li>
+          <li><a href="#">Promo</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <h1>Important Points</h1>
+        <button class="add-btn" id="overallUploadBtn" style="margin-left:20px;">Overall Upload</button>
+      </div>
+      <div class="point-form">
+        <h2>Add Single Important Point</h2>
+        <form id="pointForm" onsubmit="event.preventDefault(); addSinglePoint();">
+          <div class="form-group">
+            <label for="point1">Point 1</label>
+            <input type="text" id="point1" required />
+          </div>
+          <div class="form-group">
+            <label for="point2">Point 2</label>
+            <input type="text" id="point2" />
+          </div>
+          <div class="form-group">
+            <label for="point3">Point 3</label>
+            <input type="text" id="point3" />
+          </div>
+          <div class="form-group">
+            <label for="point4">Point 4</label>
+            <input type="text" id="point4" />
+          </div>
+          <div class="form-group">
+            <label for="point5">Point 5</label>
+            <input type="text" id="point5" />
+          </div>
+          <button class="add-btn" type="submit">Add Point</button>
+        </form>
+      </div>
+      <div class="bulk-upload">
+        <h2>Bulk Upload (Excel)</h2>
+        <input type="file" accept=".xlsx,.xls" onchange="handleExcelUpload(event)" />
+        <div style="font-size:0.95em;color:#888;margin-top:8px;">Excel: First five columns should be point1, point2, point3, point4, point5</div>
+      </div>
+      <div id="pointsContainer" class="points-container">
+        <!-- Points will be loaded here -->
+      </div>
+    </main>
+  </div>
+</body>
+</html> 
