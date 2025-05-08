@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Departmental Success</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(120deg, #e3f2fd 0%, #f4f8fb 100%);
+            margin: 0;
+            padding: 0;
+            color: #263238;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            margin: 70px auto 0 auto;
+            background: rgba(255,255,255,0.98);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(25, 118, 210, 0.10), 0 1.5px 6px rgba(67,160,71,0.07);
+            padding: 40px 32px 32px 32px;
+            position: relative;
+            text-align: center;
+        }
+        h1 {
+            color: #1976d2;
+            margin-bottom: 24px;
+        }
+        .signup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .signup-input {
+            padding: 12px 16px;
+            border: 2px solid #e3f2fd;
+            border-radius: 7px;
+            font-size: 1.08em;
+            background: #f8fafc;
+            transition: border 0.18s;
+        }
+        .signup-input:focus {
+            border-color: #1976d2;
+            outline: none;
+        }
+        .signup-btn {
+            background: linear-gradient(90deg, #43a047 0%, #1976d2 100%);
+            color: #fff;
+            border: none;
+            padding: 12px 0;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            letter-spacing: 0.5px;
+        }
+        .signup-btn:hover {
+            background: linear-gradient(90deg, #1976d2 0%, #43a047 100%);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.04);
+        }
+        .home-btn-styled {
+            background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+            color: #fff;
+            border: none;
+            padding: 10px 28px 10px 20px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: 0.5px;
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            text-decoration: none;
+        }
+        .home-btn-styled:hover {
+            background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.06);
+        }
+        .signup-footer {
+            margin-top: 28px;
+            font-size: 1em;
+        }
+        .signup-footer a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.18s;
+        }
+        .signup-footer a:hover {
+            color: #43a047;
+        }
+        .google-btn {
+            background: #fff;
+            color: #263238;
+            border: 2px solid #e3f2fd;
+            padding: 12px 0;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.10);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            letter-spacing: 0.5px;
+            width: 100%;
+            margin-top: 0.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .google-btn:hover {
+            background: #e3f2fd;
+            color: #1976d2;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.13);
+            transform: scale(1.04);
+        }
+        .google-icon {
+            font-size: 1.3em;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+          <span style="font-size:2em;color:#43a047;margin-right:10px;">🔒</span>
+          <h1 style="margin:0;font-size:2em;color:#1976d2;">Secure Sign Up</h1>
+        </div>
+        <form class="signup-form" autocomplete="off">
+            <input class="signup-input" type="text" placeholder="Full Name" required>
+            <input class="signup-input" type="email" name="username" autocomplete="username" placeholder="Email" required>
+            <div style="position:relative;display:flex;align-items:center;">
+              <input class="signup-input" id="signup-password" type="password" name="password" autocomplete="new-password" placeholder="Password" required style="width:100%;">
+              <button type="button" id="toggle-signup-password" style="position:absolute;right:10px;background:none;border:none;cursor:pointer;font-size:1.1em;color:#1976d2;" tabindex="-1">Show</button>
+            </div>
+            <div style="position:relative;display:flex;align-items:center;">
+              <input class="signup-input" id="signup-confirm-password" type="password" name="confirm-password" autocomplete="new-password" placeholder="Confirm Password" required style="width:100%;">
+              <button type="button" id="toggle-signup-confirm-password" style="position:absolute;right:10px;background:none;border:none;cursor:pointer;font-size:1.1em;color:#1976d2;" tabindex="-1">Show</button>
+            </div>
+            <button class="signup-btn" type="submit">Sign Up</button>
+        </form>
+        <div id="signup-error-message" style="color:#f44336;font-size:0.98em;margin-top:10px;min-height:22px;"></div>
+        <div style="margin-top:22px;font-size:0.98em;color:#1976d2;opacity:0.85;">
+          <span style="font-size:1.1em;">🔐</span> We never ask for your password by email or phone.
+        </div>
+        <a href="index.html" style="display:inline-block;margin-top:28px;background:#fff;color:#1976d2;border:2px solid #1976d2;padding:10px 28px 10px 20px;border-radius:999px;font-weight:700;font-size:1.08em;box-shadow:0 2px 10px rgba(25,118,210,0.13);transition:background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;cursor:pointer;outline:none;letter-spacing:0.5px;text-decoration:none;">🏠 Back to Home</a>
+    </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+  authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+  projectId: "departmentalsuccess-bdca1",
+  storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+  messagingSenderId: "352122480258",
+  appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+  measurementId: "G-NPR3MDSDNY"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+async function saveUserToFirestore(user, name = null) {
+  await setDoc(doc(db, "users", user.uid), {
+    name: name || user.displayName || "",
+    email: user.email,
+        mobile: "N/A",
+        coupon: "N/A",
+        currentDeviceId: "N/A",
+        expiry: "N/A",
+        expiryDate: "N/A",
+        isLoggedIn: true,
+        isVerified: false,
+        lastLoginTime: new Date().toISOString(),
+        loginIn: new Date().toISOString(),
+        paid: false,
+        paymentDate: "N/A",
+        paymentId: "N/A",
+        plan: "N/A",
+        price: "N/A",
+        registeredOn: new Date().toUTCString(),
+        role: "user",
+        subscribedOn: "N/A",
+        userStatus: "N/A",
+        verified: false,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+}
+
+// Email/password sign up
+const signupForm = document.querySelector('.signup-form');
+const signupErrorMessage = document.getElementById('signup-error-message');
+const signupPasswordInput = document.getElementById('signup-password');
+const signupConfirmPasswordInput = document.getElementById('signup-confirm-password');
+if (signupForm) {
+  signupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = e.target[0].value;
+    const email = e.target[1].value;
+    const password = signupPasswordInput ? signupPasswordInput.value.trim() : '';
+    const confirmPassword = signupConfirmPasswordInput ? signupConfirmPasswordInput.value.trim() : '';
+    if (signupErrorMessage) signupErrorMessage.textContent = '';
+    if (password !== confirmPassword) {
+      if (signupErrorMessage) signupErrorMessage.textContent = 'Passwords do not match!';
+      return;
+    }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await saveUserToFirestore(userCredential.user, name);
+      window.location.href = 'index.html';
+    } catch (error) {
+      if (signupErrorMessage) {
+        if (error.code === 'auth/email-already-in-use') {
+          signupErrorMessage.textContent = 'This email is already in use. Please use a different email or login.';
+        } else {
+          signupErrorMessage.textContent = 'Sign up failed. ' + (error.message || 'Please try again.');
+        }
+      }
+    }
+  });
+}
+
+// Show/hide password toggles for signup
+const toggleSignupPasswordBtn = document.getElementById('toggle-signup-password');
+const toggleSignupConfirmPasswordBtn = document.getElementById('toggle-signup-confirm-password');
+if (toggleSignupPasswordBtn && signupPasswordInput) {
+  toggleSignupPasswordBtn.addEventListener('click', () => {
+    if (signupPasswordInput.type === 'password') {
+      signupPasswordInput.type = 'text';
+      toggleSignupPasswordBtn.textContent = 'Hide';
+    } else {
+      signupPasswordInput.type = 'password';
+      toggleSignupPasswordBtn.textContent = 'Show';
+    }
+    signupPasswordInput.focus();
+  });
+}
+if (toggleSignupConfirmPasswordBtn && signupConfirmPasswordInput) {
+  toggleSignupConfirmPasswordBtn.addEventListener('click', () => {
+    if (signupConfirmPasswordInput.type === 'password') {
+      signupConfirmPasswordInput.type = 'text';
+      toggleSignupConfirmPasswordBtn.textContent = 'Hide';
+    } else {
+      signupConfirmPasswordInput.type = 'password';
+      toggleSignupConfirmPasswordBtn.textContent = 'Show';
+    }
+    signupConfirmPasswordInput.focus();
+  });
+}
+</script>
+</body>
+</html> 

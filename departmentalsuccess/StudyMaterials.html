@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Materials - Departmental Success</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(120deg, #e3f2fd 0%, #f4f8fb 100%);
+            margin: 0;
+            padding: 0;
+            color: #263238;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto 30px auto;
+            background: rgba(255,255,255,0.98);
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(25, 118, 210, 0.13), 0 2px 8px rgba(67,160,71,0.09);
+            padding: 48px 36px 36px 36px;
+            position: relative;
+            overflow: hidden;
+        }
+        h1, h2 {
+            color: #1976d2;
+            margin-bottom: 18px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+        .topic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 32px;
+            margin-top: 28px;
+        }
+        .topic-card {
+            background: linear-gradient(120deg, #e3f2fd 60%, #fff 100%);
+            border-radius: 16px;
+            padding: 32px 22px;
+            box-shadow: 0 4px 24px rgba(25, 118, 210, 0.10);
+            cursor: pointer;
+            transition: transform 0.22s, box-shadow 0.22s, background 0.22s;
+            font-size: 1.22em;
+            font-weight: 600;
+            text-align: center;
+            border: 2.5px solid #e3f2fd;
+            position: relative;
+            overflow: hidden;
+        }
+        .lock-icon {
+            width: 24px;
+            height: 24px;
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .topic-card:hover .lock-icon {
+            opacity: 1;
+        }
+        .topic-card.locked {
+            background: linear-gradient(120deg, #f5f5f5 60%, #fff 100%);
+            border-color: #e0e0e0;
+            color: #757575;
+        }
+        .topic-card.locked:hover {
+            background: linear-gradient(120deg, #eeeeee 60%, #f5f5f5 100%);
+            border-color: #bdbdbd;
+            transform: translateY(-5px) scale(1.02);
+        }
+        .topic-card:hover {
+            transform: translateY(-10px) scale(1.04) rotate(-1deg);
+            box-shadow: 0 12px 36px rgba(25, 118, 210, 0.18);
+            background: linear-gradient(120deg, #bbdefb 60%, #e3f2fd 100%);
+            border-color: #1976d2;
+        }
+        .back-button {
+            margin-bottom: 20px;
+            padding: 12px 28px;
+            background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 1.08em;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .back-button:hover:enabled {
+            background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.06);
+        }
+        .nav-btn-icon {
+            font-size: 1.2em;
+            margin-right: 6px;
+        }
+        #single-important-point {
+            min-height: 56px;
+            font-size: 1.18em;
+            color: #37474f;
+            background: linear-gradient(90deg, #e3f2fd 60%, #fff 100%);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(25, 118, 210, 0.08);
+            padding: 28px 22px;
+            margin-bottom: 18px;
+            font-weight: 500;
+            text-align: center;
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 1;
+            touch-action: pan-y pinch-zoom;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .fade-in {
+            opacity: 1 !important;
+            transform: translateY(0);
+        }
+        .fade-out {
+            opacity: 0 !important;
+            transform: translateY(20px);
+        }
+        .home-btn-styled {
+            background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+            color: #fff;
+            border: none;
+            padding: 10px 28px 10px 20px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: 0.5px;
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            text-decoration: none;
+        }
+        .home-btn-styled:hover {
+            background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.06);
+        }
+        @media (max-width: 700px) {
+            .container {
+                padding: 12px 2vw 18px 2vw;
+            }
+            .topic-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+            #single-important-point {
+                padding: 18px 8px;
+            }
+            .home-btn-styled {
+                padding: 10px;
+                width: 40px;
+                height: 40px;
+                justify-content: center;
+            }
+            .home-btn-styled span:not(:first-child) {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="home-btn-styled">
+            <span style="font-size:1.25em;vertical-align:middle;">🏠</span>
+            <span>Home</span>
+        </a>
+        <h1>Study Materials</h1>
+        <div id="topic-section">
+            <h2>Select a Topic</h2>
+            <div class="topic-grid" id="topic-grid"></div>
+        </div>
+        <div id="subtopic-section" style="display:none;">
+            <button class="back-button" id="back-to-topics">← Back to Topics</button>
+            <h2 id="subtopic-title">Select a Subtopic</h2>
+            <div class="topic-grid" id="subtopic-grid"></div>
+        </div>
+        <div id="points-section" style="display:none;">
+            <button class="back-button" id="back-to-subtopics">← Back to Subtopics</button>
+            <h2 id="points-title"></h2>
+            <div id="single-important-point" style="margin-top:18px;font-size:1.13em;color:#37474f;min-height:48px;"></div>
+            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
+                <button id="prev-point-btn" class="back-button" style="background:#1565c0;" disabled>⏮️ Previous</button>
+                <button id="next-point-btn" class="back-button" style="background:#43a047;">Next ⏭️</button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+            authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+            projectId: "departmentalsuccess-bdca1",
+            storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+            messagingSenderId: "352122480258",
+            appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+            measurementId: "G-NPR3MDSDNY"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentTopicId = null;
+        let currentTopicName = null;
+        let currentSubtopicId = null;
+        let currentSubtopicName = null;
+        let importantPointsArray = [];
+        let currentPointIndex = 0;
+        let isUserLoggedIn = false;
+        let currentUser = null;
+        let isUserPaid = false;
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50; // Minimum distance required for a swipe
+
+        // Check authentication state
+        onAuthStateChanged(auth, (user) => {
+            isUserLoggedIn = !!user;
+            currentUser = user;
+        });
+
+        // Check user's subscription status
+        async function checkUserSubscription() {
+            if (!currentUser) return false;
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    return userData && (userData.isAdmin || userData.hasActiveSubscription);
+                }
+                return false;
+            } catch (error) {
+                console.error("Error checking subscription:", error);
+                return false;
+            }
+        }
+
+        async function loadTopics() {
+            document.getElementById('topic-section').style.display = '';
+            document.getElementById('subtopic-section').style.display = 'none';
+            document.getElementById('points-section').style.display = 'none';
+            const topicGrid = document.getElementById('topic-grid');
+            topicGrid.innerHTML = '';
+            const topicsCol = collection(db, 'StudyMaterials');
+            const topicsSnapshot = await getDocs(topicsCol);
+            
+            // Convert to array and sort
+            const topicsArray = [];
+            topicsSnapshot.forEach((docSnap) => {
+                topicsArray.push({
+                    id: docSnap.id,
+                    name: docSnap.data().name || docSnap.id
+                });
+            });
+            
+            // Sort topics alphabetically
+            topicsArray.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Create and append sorted topic cards
+            topicsArray.forEach((topic) => {
+                const topicCard = document.createElement('div');
+                topicCard.className = 'topic-card';
+                topicCard.textContent = topic.name;
+                topicCard.onclick = () => selectTopic(topic.id, topic.name);
+                topicGrid.appendChild(topicCard);
+            });
+        }
+
+        async function selectTopic(topicId, topicName) {
+            currentTopicId = topicId;
+            currentTopicName = topicName;
+            document.getElementById('topic-section').style.display = 'none';
+            document.getElementById('subtopic-section').style.display = '';
+            document.getElementById('points-section').style.display = 'none';
+            document.getElementById('subtopic-title').textContent = `Subtopics in "${topicName}"`;
+            
+            // Check user's subscription status
+            isUserPaid = await checkUserSubscription();
+
+            const subtopicGrid = document.getElementById('subtopic-grid');
+            subtopicGrid.innerHTML = '';
+            const subtopicsCol = collection(db, 'StudyMaterials', topicId, 'subtopics');
+            const subtopicsSnapshot = await getDocs(subtopicsCol);
+            
+            // Convert to array and sort
+            const subtopicsArray = [];
+            subtopicsSnapshot.forEach((docSnap) => {
+                subtopicsArray.push({
+                    id: docSnap.id,
+                    name: docSnap.data().name || docSnap.id
+                });
+            });
+            
+            // Sort subtopics alphabetically
+            subtopicsArray.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Create and append sorted subtopic cards
+            subtopicsArray.forEach((subtopic) => {
+                const subtopicCard = document.createElement('div');
+                subtopicCard.className = 'topic-card';
+                
+                if (!isUserPaid) {
+                    subtopicCard.classList.add('locked');
+                }
+                
+                subtopicCard.textContent = subtopic.name;
+                
+                // Add lock icon for unpaid users
+                if (!isUserPaid) {
+                    const lockIcon = document.createElement('img');
+                    lockIcon.src = 'lock.png';
+                    lockIcon.alt = 'Locked';
+                    lockIcon.className = 'lock-icon';
+                    subtopicCard.appendChild(lockIcon);
+                }
+
+                subtopicCard.onclick = () => {
+                    if (!isUserLoggedIn) {
+                        window.location.href = 'login.html';
+                    } else if (!isUserPaid) {
+                        window.location.href = 'payment.html';
+                    } else {
+                        selectSubtopic(subtopic.id, subtopic.name);
+                    }
+                };
+                subtopicGrid.appendChild(subtopicCard);
+            });
+        }
+
+        function handleTouchStart(event) {
+            touchStartX = event.touches[0].clientX;
+        }
+
+        function handleTouchMove(event) {
+            touchEndX = event.touches[0].clientX;
+        }
+
+        function handleTouchEnd() {
+            const swipeDistance = touchEndX - touchStartX;
+            
+            // Check if swipe distance is significant enough
+            if (Math.abs(swipeDistance) < minSwipeDistance) return;
+
+            if (swipeDistance > 0) {
+                // Swipe right - go to previous
+                if (currentPointIndex > 0) {
+                    currentPointIndex--;
+                    showImportantPoint(currentPointIndex);
+                }
+            } else {
+                // Swipe left - go to next
+                if (currentPointIndex < importantPointsArray.length - 1) {
+                    currentPointIndex++;
+                    showImportantPoint(currentPointIndex);
+                }
+            }
+        }
+
+        async function selectSubtopic(subtopicId, subtopicName) {
+            // Check if user is logged in
+            if (!isUserLoggedIn) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Check if user has active subscription
+            const hasSubscription = await checkUserSubscription();
+            if (!hasSubscription) {
+                window.location.href = 'payment.html';
+                return;
+            }
+
+            currentSubtopicId = subtopicId;
+            currentSubtopicName = subtopicName;
+            document.getElementById('topic-section').style.display = 'none';
+            document.getElementById('subtopic-section').style.display = 'none';
+            document.getElementById('points-section').style.display = '';
+            document.getElementById('points-title').textContent = `Important Points for "${subtopicName}"`;
+            importantPointsArray = [];
+            currentPointIndex = 0;
+            const singlePointDiv = document.getElementById('single-important-point');
+            singlePointDiv.textContent = '';
+
+            // Add touch event listeners
+            singlePointDiv.addEventListener('touchstart', handleTouchStart, { passive: true });
+            singlePointDiv.addEventListener('touchmove', handleTouchMove, { passive: true });
+            singlePointDiv.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+            const pointsCol = collection(db, 'StudyMaterials', currentTopicId, 'subtopics', subtopicId, 'importantpoints');
+            const pointsSnapshot = await getDocs(pointsCol);
+            if (pointsSnapshot.empty) {
+                singlePointDiv.textContent = 'No important points found for this subtopic.';
+                document.getElementById('prev-point-btn').disabled = true;
+                document.getElementById('next-point-btn').disabled = true;
+            } else {
+                pointsSnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    // Collect up to 5 points from each document
+                    const points = [];
+                    for (let i = 1; i <= 5; i++) {
+                        if (data[`point${i}`]) points.push(data[`point${i}`]);
+                    }
+                    if (points.length > 0) {
+                        importantPointsArray.push(points);
+                    }
+                });
+                showImportantPoint(0);
+            }
+        }
+
+        function showImportantPoint(index) {
+            const singlePointDiv = document.getElementById('single-important-point');
+            singlePointDiv.classList.remove('fade-in');
+            singlePointDiv.classList.add('fade-out');
+            setTimeout(() => {
+                // Show all points for this document as a list
+                const points = importantPointsArray[index] || [];
+                if (points.length === 0) {
+                    singlePointDiv.textContent = 'No important points found.';
+                } else {
+                    singlePointDiv.innerHTML = '<ul style="text-align:left;max-width:600px;margin:0 auto;">' +
+                        points.map(pt => `<li style='margin-bottom:10px;'>${pt}</li>`).join('') +
+                        '</ul>';
+                }
+                singlePointDiv.classList.remove('fade-out');
+                singlePointDiv.classList.add('fade-in');
+            }, 180);
+            document.getElementById('prev-point-btn').disabled = index === 0;
+            document.getElementById('next-point-btn').disabled = index === importantPointsArray.length - 1;
+        }
+
+        document.getElementById('prev-point-btn').onclick = function() {
+            if (currentPointIndex > 0) {
+                currentPointIndex--;
+                showImportantPoint(currentPointIndex);
+            }
+        };
+        document.getElementById('next-point-btn').onclick = function() {
+            if (currentPointIndex < importantPointsArray.length - 1) {
+                currentPointIndex++;
+                showImportantPoint(currentPointIndex);
+            }
+        };
+
+        document.getElementById('back-to-topics').onclick = function() {
+            loadTopics();
+        };
+        document.getElementById('back-to-subtopics').onclick = function() {
+            selectTopic(currentTopicId, currentTopicName);
+        };
+
+        // Initialize the page
+        loadTopics();
+    </script>
+</body>
+</html> 

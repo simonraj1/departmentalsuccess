@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Departmental Success</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(120deg, #e3f2fd 0%, #f4f8fb 100%);
+            margin: 0;
+            padding: 0;
+            color: #263238;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            margin: 70px auto 0 auto;
+            background: rgba(255,255,255,0.98);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(25, 118, 210, 0.10), 0 1.5px 6px rgba(67,160,71,0.07);
+            padding: 40px 32px 32px 32px;
+            position: relative;
+            text-align: center;
+        }
+        h1 {
+            color: #1976d2;
+            margin-bottom: 24px;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .login-input {
+            padding: 12px 16px;
+            border: 2px solid #e3f2fd;
+            border-radius: 7px;
+            font-size: 1.08em;
+            background: #f8fafc;
+            transition: border 0.18s;
+        }
+        .login-input:focus {
+            border-color: #1976d2;
+            outline: none;
+        }
+        .login-btn {
+            background: linear-gradient(90deg, #43a047 0%, #1976d2 100%);
+            color: #fff;
+            border: none;
+            padding: 12px 0;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            letter-spacing: 0.5px;
+        }
+        .login-btn:hover {
+            background: linear-gradient(90deg, #1976d2 0%, #43a047 100%);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.04);
+        }
+        .home-btn-styled {
+            background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+            color: #fff;
+            border: none;
+            padding: 10px 28px 10px 20px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: 0.5px;
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            text-decoration: none;
+        }
+        .home-btn-styled:hover {
+            background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.06);
+        }
+        .login-footer {
+            margin-top: 28px;
+            font-size: 1em;
+        }
+        .login-footer a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.18s;
+        }
+        .login-footer a:hover {
+            color: #43a047;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+          <span style="font-size:2em;color:#43a047;margin-right:10px;">🔒</span>
+          <h1 style="margin:0;font-size:2em;color:#1976d2;">Secure Login</h1>
+        </div>
+        <form class="login-form" autocomplete="off">
+            <input class="login-input" type="email" name="username" autocomplete="username" placeholder="Email" required>
+            <div style="position:relative;display:flex;align-items:center;">
+              <input class="login-input" id="login-password" type="password" name="password" autocomplete="current-password" placeholder="Password" required style="width:100%;">
+              <button type="button" id="toggle-password" style="position:absolute;right:10px;background:none;border:none;cursor:pointer;font-size:1.1em;color:#1976d2;" tabindex="-1">Show</button>
+            </div>
+            <button class="login-btn" type="submit">Login</button>
+        </form>
+        <div id="login-error-message" style="color:#f44336;font-size:0.98em;margin-top:10px;min-height:22px;"></div>
+        <div style="margin-top: 10px;">
+            <a href="#" id="forgot-password-link" style="color:#1976d2;text-decoration:underline;font-size:0.98em;">Forgot password?</a>
+        </div>
+        <div id="forgot-password-form-container" style="display:none;margin-top:18px;">
+          <form id="forgot-password-form" style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+            <input id="forgot-password-email" class="login-input" type="email" placeholder="Enter your email" required style="width:90%;max-width:320px;">
+            <button type="submit" class="login-btn" style="width:100%;max-width:180px;">Send Reset Link</button>
+          </form>
+          <div id="forgot-password-message" style="font-size:0.98em;margin-top:8px;min-height:22px;"></div>
+        </div>
+        <div style="margin-top:18px;font-size:1em;">
+          <span>Don't have an account? <a href="SignUp.html" style="color:#1976d2;text-decoration:underline;font-weight:500;">Sign up</a></span>
+        </div>
+        <div style="margin-top:22px;font-size:0.98em;color:#1976d2;opacity:0.85;">
+          <span style="font-size:1.1em;">🔐</span> We never ask for your password by email or phone.
+        </div>
+        <a href="index.html" style="display:inline-block;margin-top:28px;background:#fff;color:#1976d2;border:2px solid #1976d2;padding:10px 28px 10px 20px;border-radius:999px;font-weight:700;font-size:1.08em;box-shadow:0 2px 10px rgba(25,118,210,0.13);transition:background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;cursor:pointer;outline:none;letter-spacing:0.5px;text-decoration:none;">🏠 Back to Home</a>
+    </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+  authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+  projectId: "departmentalsuccess-bdca1",
+  storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+  messagingSenderId: "352122480258",
+  appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+  measurementId: "G-NPR3MDSDNY"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Email/password login
+const loginForm = document.querySelector('.login-form');
+const loginErrorMessage = document.getElementById('login-error-message');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = e.target[0].value;
+    const password = e.target[1].value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = 'index.html';
+    } catch (error) {
+      if (loginErrorMessage) {
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          loginErrorMessage.textContent = 'Your email or password is incorrect.';
+        } else {
+          loginErrorMessage.textContent = 'Login failed. Please try again.';
+        }
+      }
+    }
+  });
+}
+
+// Forgot password
+const forgotPasswordLink = document.getElementById('forgot-password-link');
+const forgotPasswordFormContainer = document.getElementById('forgot-password-form-container');
+const forgotPasswordForm = document.getElementById('forgot-password-form');
+const forgotPasswordEmail = document.getElementById('forgot-password-email');
+const forgotPasswordMessage = document.getElementById('forgot-password-message');
+if (forgotPasswordLink) {
+  forgotPasswordLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (forgotPasswordFormContainer.style.display === 'none') {
+      forgotPasswordFormContainer.style.display = 'block';
+      forgotPasswordMessage.textContent = '';
+      forgotPasswordEmail.value = '';
+      forgotPasswordEmail.focus();
+    } else {
+      forgotPasswordFormContainer.style.display = 'none';
+    }
+  });
+}
+
+if (forgotPasswordForm) {
+  forgotPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = forgotPasswordEmail.value.trim();
+    forgotPasswordMessage.textContent = '';
+    if (!email) {
+      forgotPasswordMessage.textContent = 'Please enter your email.';
+      forgotPasswordMessage.style.color = '#f44336';
+      return;
+    }
+      try {
+        await sendPasswordResetEmail(auth, email);
+      forgotPasswordMessage.textContent = 'Password reset email sent! Please check your inbox.';
+      forgotPasswordMessage.style.color = '#43a047';
+      } catch (error) {
+      forgotPasswordMessage.textContent = 'Error: ' + (error.message || 'Unable to send reset email.');
+      forgotPasswordMessage.style.color = '#f44336';
+    }
+  });
+}
+
+// Show/hide password toggle
+const passwordInput = document.getElementById('login-password');
+const togglePasswordBtn = document.getElementById('toggle-password');
+if (togglePasswordBtn && passwordInput) {
+  togglePasswordBtn.addEventListener('click', () => {
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      togglePasswordBtn.textContent = 'Hide';
+    } else {
+      passwordInput.type = 'password';
+      togglePasswordBtn.textContent = 'Show';
+    }
+    passwordInput.focus();
+  });
+}
+</script>
+</body>
+</html> 

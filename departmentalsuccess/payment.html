@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Departmental Success</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(120deg, #e3f2fd 0%, #f4f8fb 100%);
+            margin: 0;
+            padding: 0;
+            color: #263238;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: rgba(255,255,255,0.98);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(25, 118, 210, 0.10), 0 1.5px 6px rgba(67,160,71,0.07);
+            padding: 40px 32px;
+            position: relative;
+        }
+        h1 {
+            color: #1976d2;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .pricing-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid #e3f2fd;
+        }
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        .pricing-card h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .price {
+            font-size: 2.5em;
+            color: #43a047;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .price span {
+            font-size: 0.5em;
+            color: #666;
+        }
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        .pricing-features li {
+            margin: 10px 0;
+            color: #666;
+            font-size: 1.1em;
+        }
+        .pricing-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #43a047;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s;
+            cursor: pointer;
+            border: none;
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+        .pricing-button:hover {
+            background: #2e7031;
+        }
+        .promo-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e3f2fd;
+        }
+        .promo-input {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .promo-input input {
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            width: 250px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .promo-input input:focus {
+            border-color: #43a047;
+        }
+        .promo-input button {
+            padding: 12px 25px;
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .promo-input button:hover {
+            background: #1565c0;
+        }
+        .promo-message {
+            margin-top: 15px;
+            font-size: 1em;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .promo-success {
+            color: #43a047;
+            background: #e8f5e9;
+        }
+        .promo-error {
+            color: #f44336;
+            background: #ffebee;
+        }
+        .home-btn-styled {
+            background: linear-gradient(90deg, #42a5f5 0%, #1976d2 100%);
+            color: #fff;
+            border: none;
+            padding: 10px 28px 10px 20px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.08em;
+            box-shadow: 0 2px 10px rgba(25, 118, 210, 0.13);
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: 0.5px;
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            text-decoration: none;
+        }
+        .home-btn-styled:hover {
+            background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(25, 118, 210, 0.18);
+            transform: scale(1.06);
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 20px;
+            }
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+            .home-btn-styled {
+                padding: 10px;
+                width: 40px;
+                height: 40px;
+                justify-content: center;
+            }
+            .home-btn-styled span:not(:first-child) {
+                display: none;
+            }
+            .promo-input {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .promo-input input {
+                width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+            }
+            .promo-input button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="home-btn-styled">
+            <span style="font-size:1.25em;vertical-align:middle;">🏠</span>
+            <span>Home</span>
+        </a>
+        <h1>Choose Your Plan</h1>
+        <div class="promo-section">
+            <h3>Have a Promo Code?</h3>
+            <div class="promo-input">
+                <input type="text" id="promoCode" placeholder="Enter promo code" maxlength="20">
+                <button onclick="applyPromoCode()">Apply</button>
+            </div>
+            <div id="promoMessage" class="promo-message"></div>
+        </div>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <h3>1 Month Plan</h3>
+                <div class="price">₹799<span>/month</span></div>
+                <ul class="pricing-features">
+                    <li>Full access to question bank</li>
+                    <li>Download study materials</li>
+                    <li>Community access</li>
+                    <li>24/7 support</li>
+                </ul>
+                <button class="pricing-button" id="get-started-btn">Get Started</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcxJpaqLu4bAIPtBgv0m_V7qm2wpxXWBo",
+            authDomain: "departmentalsuccess-bdca1.firebaseapp.com",
+            projectId: "departmentalsuccess-bdca1",
+            storageBucket: "departmentalsuccess-bdca1.firebasestorage.app",
+            messagingSenderId: "352122480258",
+            appId: "1:352122480258:web:e4a2d19c77b66122a1b69b",
+            measurementId: "G-NPR3MDSDNY"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Check if user is logged in and redirect if not
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            }
+        });
+
+        let discountedAmount = 79900; // Default amount in paise (₹799)
+        let appliedPromo = null;
+
+        // Promo code handler
+        window.applyPromoCode = async function() {
+            const promoCode = document.getElementById('promoCode').value.trim();
+            const messageDiv = document.getElementById('promoMessage');
+            if (!promoCode) {
+                messageDiv.textContent = 'Please enter a promo code';
+                messageDiv.className = 'promo-message promo-error';
+                return;
+            }
+            try {
+                const q = query(collection(db, 'promocode'), where('code', '==', promoCode));
+                const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) {
+                    messageDiv.textContent = 'Invalid promo code!';
+                    messageDiv.className = 'promo-message promo-error';
+                    discountedAmount = 79900;
+                    appliedPromo = null;
+                    updateDisplayedPrice();
+                    return;
+                }
+                const promoData = querySnapshot.docs[0].data();
+                let discount = Math.round(promoData.discount * 100); // flat amount in rupees
+                discountedAmount = Math.max(79900 - discount, 0);
+                appliedPromo = promoCode;
+                messageDiv.textContent = `Promo code applied! You save ₹${promoData.discount}.`;
+                messageDiv.className = 'promo-message promo-success';
+                updateDisplayedPrice();
+            } catch (error) {
+                messageDiv.textContent = 'Error applying promo code. Please try again.';
+                messageDiv.className = 'promo-message promo-error';
+                discountedAmount = 79900;
+                appliedPromo = null;
+                updateDisplayedPrice();
+            }
+        };
+
+        function updateDisplayedPrice() {
+            const priceDiv = document.querySelector('.price');
+            if (discountedAmount < 79900) {
+                priceDiv.innerHTML = `₹${(discountedAmount/100).toFixed(2)}<span style="text-decoration:line-through;color:#f44336;font-size:0.6em;margin-left:8px;">₹799</span><span>/month</span>`;
+            } else {
+                priceDiv.innerHTML = '₹799<span>/month</span>';
+            }
+        }
+
+        document.getElementById('get-started-btn').onclick = function() {
+            // Get the latest value from the DOM, not from a variable
+            let priceDiv = document.querySelector('.price');
+            let priceText = priceDiv.textContent.match(/₹([0-9.]+)/);
+            let amountToPay = discountedAmount; // Use the discounted amount
+            if (priceText && priceText[1]) {
+                amountToPay = Math.round(parseFloat(priceText[1]) * 100);
+            }
+            var options = {
+                key: "rzp_live_MgjRmhfd77xAEI",
+                amount: amountToPay,
+                currency: "INR",
+                name: "Departmental Success",
+                description: "1 Month Subscription",
+                image: "logo.png",
+                handler: async function (response){
+                    alert("Payment successful! Payment ID: " + response.razorpay_payment_id);
+                    // Update Firestore to give the user access
+                    const user = auth.currentUser;
+                    if (user) {
+                        const currentDate = new Date();
+                        const expiryDate = new Date(currentDate.getTime() + 30*24*60*60*1000); // 30 days from now
+                        
+                        await setDoc(doc(db, 'users', user.uid), {
+                            hasActiveSubscription: true,
+                            subscriptionStartDate: currentDate,
+                            subscriptionEndDate: expiryDate,
+                            paid: true,
+                            plan: "1month",
+                            price: (amountToPay/100).toString(), // Convert paise to rupees
+                            paymentDate: currentDate.toISOString(),
+                            paymentId: response.razorpay_payment_id,
+                            subscribedOn: currentDate.toISOString(),
+                            userStatus: "active",
+                            coupon: appliedPromo || "N/A",
+                            expiry: expiryDate.toISOString(),
+                            expiryDate: expiryDate.toISOString()
+                        }, { merge: true });
+                        
+                        // Redirect to home page after successful payment
+                        window.location.href = 'index.html';
+                    }
+                },
+                prefill: {
+                    name: "",
+                    email: "",
+                    contact: ""
+                },
+                theme: {
+                    color: "#43a047"
+                }
+            };
+            var rzp = new Razorpay(options);
+            rzp.open();
+        };
+    </script>
+</body>
+</html> 
